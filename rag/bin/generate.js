@@ -25,7 +25,7 @@ const generate = (question) => __awaiter(void 0, void 0, void 0, function* () {
             modelId: "meta-llama/llama-2-13b-chat",
             modelParameters: {
                 max_new_tokens: 250,
-                temperature: 0.5,
+                temperature: 0.3,
                 stop_sequences: [],
                 repetition_penalty: 1,
             },
@@ -51,20 +51,16 @@ const createVectorStoreRetriever = () => __awaiter(void 0, void 0, void 0, funct
 const finalChain = (model, retriever, question) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log("Final Chain");
-        const qaSystemPrompt = `
+        const qaSystemPrompt = prompts_1.PromptTemplate.fromTemplate(`
         If the user interaction is a question and directly pertains to the context of the uploaded document, provide an answer to the question.
         If the user interaction is a question but is not relevant to the content of the document, respond with "The question is out of context."
         If the user interaction is not a question (e.g., a statement or command), reply with "I can answer questions related to the document."
         Please ensure that the responses are accurate and contextually relevant to the document content.
 
-        Context delimited by triple double quotes
-        """{context}"""
+        Context: {context}
 
-        `;
-        const qaPrompt = prompts_1.ChatPromptTemplate.fromMessages([
-            ["system", qaSystemPrompt],
-            ["human", "{question}"],
-        ]);
+        Question: {question}
+        `);
         const ragChain = runnables_1.RunnableSequence.from([
             {
                 context: (input) => __awaiter(void 0, void 0, void 0, function* () {
@@ -74,7 +70,7 @@ const finalChain = (model, retriever, question) => __awaiter(void 0, void 0, voi
                 }),
                 question: (input) => input.question,
             },
-            qaPrompt,
+            qaSystemPrompt,
             model,
         ]);
         return yield ragChain.invoke({
@@ -88,9 +84,10 @@ const finalChain = (model, retriever, question) => __awaiter(void 0, void 0, voi
 });
 const cleanResponse = (response) => {
     console.log("Cleaning Response");
-    let res = response.trim();
-    res = response.replace(/\s*AI:\s*/gm, "");
+    let res = response.replace(/\s\s+/g, " ");
+    res = res.replace(/\s*AI:\s*/gm, "");
     res = res.replace(/(\r\n|\n|\r)/gm, "");
+    res = res.trim();
     return res;
 };
 //# sourceMappingURL=generate.js.map
